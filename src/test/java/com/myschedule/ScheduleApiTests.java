@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.nullValue;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,8 @@ class ScheduleApiTests {
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.id").value(1))
 				.andExpect(jsonPath("$.title").value("기획 회의"))
-				.andExpect(jsonPath("$.completed").value(false));
+				.andExpect(jsonPath("$.completed").value(false))
+				.andExpect(jsonPath("$.timeUnspecified").value(false));
 
 		mockMvc.perform(get("/api/schedules"))
 				.andExpect(status().isOk())
@@ -68,6 +70,49 @@ class ScheduleApiTests {
 		mockMvc.perform(delete("/api/schedules/1")).andExpect(status().isNoContent());
 		mockMvc.perform(get("/api/schedules/1")).andExpect(status().isNotFound());
 		mockMvc.perform(get("/api/schedules")).andExpect(status().isOk()).andExpect(jsonPath("$").isEmpty());
+	}
+
+	@Test
+	void supportsUnspecifiedAndTimedSchedulesAndTransitions() throws Exception {
+		String unspecified = """
+				{"title":"시간 없는 일정","description":"설명","date":"2026-11-12","time":null,"endTime":null,"timeUnspecified":true,"priority":"normal"}
+				""";
+		mockMvc.perform(post("/api/schedules").contentType(MediaType.APPLICATION_JSON).content(unspecified))
+				.andExpect(status().isCreated()).andExpect(jsonPath("$.timeUnspecified").value(true))
+				.andExpect(jsonPath("$.time").value(nullValue())).andExpect(jsonPath("$.endTime").value(nullValue()));
+
+		String timed = """
+				{"title":"시간 지정 일정","description":"설명","date":"2026-11-12","time":"09:00","endTime":"10:00","timeUnspecified":false,"priority":"high"}
+				""";
+		mockMvc.perform(post("/api/schedules").contentType(MediaType.APPLICATION_JSON).content(timed))
+				.andExpect(status().isCreated()).andExpect(jsonPath("$.timeUnspecified").value(false))
+				.andExpect(jsonPath("$.time").value("09:00:00")).andExpect(jsonPath("$.endTime").value("10:00:00"));
+		mockMvc.perform(put("/api/schedules/1").contentType(MediaType.APPLICATION_JSON).content(timed))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.timeUnspecified").value(false))
+				.andExpect(jsonPath("$.time").value("09:00:00")).andExpect(jsonPath("$.endTime").value("10:00:00"));
+		mockMvc.perform(put("/api/schedules/1").contentType(MediaType.APPLICATION_JSON).content(unspecified))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.timeUnspecified").value(true));
+		mockMvc.perform(patch("/api/schedules/1/completion").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"completed\":true}"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.completed").value(true));
+		mockMvc.perform(delete("/api/schedules/1")).andExpect(status().isNoContent());
+		mockMvc.perform(delete("/api/schedules/2")).andExpect(status().isNoContent());
+	}
+
+	@Test
+	void rejectsInvalidTimeConfigurations() throws Exception {
+		String missingTimes = """
+				{"title":"일정","date":"2026-11-12","time":null,"endTime":null,"timeUnspecified":false,"priority":"normal"}
+				""";
+		String reversedTimes = """
+				{"title":"일정","date":"2026-11-12","time":"10:00","endTime":"09:00","timeUnspecified":false,"priority":"normal"}
+				""";
+		String timesOnUnspecified = """
+				{"title":"일정","date":"2026-11-12","time":"10:00","endTime":null,"timeUnspecified":true,"priority":"normal"}
+				""";
+		mockMvc.perform(post("/api/schedules").contentType(MediaType.APPLICATION_JSON).content(missingTimes)).andExpect(status().isBadRequest());
+		mockMvc.perform(post("/api/schedules").contentType(MediaType.APPLICATION_JSON).content(reversedTimes)).andExpect(status().isBadRequest());
+		mockMvc.perform(post("/api/schedules").contentType(MediaType.APPLICATION_JSON).content(timesOnUnspecified)).andExpect(status().isBadRequest());
 	}
 
 	@Test

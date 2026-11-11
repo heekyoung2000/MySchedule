@@ -27,7 +27,9 @@ public class InMemoryScheduleRepository implements ScheduleRepository {
 	@Override
 	public List<Schedule> findAll() {
 		return schedules.values().stream()
-				.sorted(Comparator.comparing(Schedule::getDate).thenComparing(Schedule::getTime).thenComparing(Schedule::getId))
+				.sorted(Comparator.comparing(Schedule::getDate)
+						.thenComparing(Schedule::getTime, Comparator.nullsLast(Comparator.naturalOrder()))
+						.thenComparing(Schedule::getId))
 				.toList();
 	}
 

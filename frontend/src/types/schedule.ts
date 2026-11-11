@@ -5,7 +5,10 @@ export interface Schedule {
   title: string;
   description: string | null;
   date: string;
-  time: string;
+  time: string | null;
+  endTime?: string | null;
+  timeUnspecified?: boolean;
+  category?: string | null;
   priority: Priority;
   completed: boolean;
 }
@@ -14,7 +17,9 @@ export interface ScheduleRequest {
   title: string;
   description: string;
   date: string;
-  time: string;
+  time: string | null;
+  endTime: string | null;
+  timeUnspecified?: boolean;
   priority: Priority;
 }
 

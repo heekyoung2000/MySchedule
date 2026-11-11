@@ -10,9 +10,11 @@ import CalendarPanel from './components/calendar/CalendarPanel';
 import SchedulePanel from './components/schedule/SchedulePanel';
 import ScheduleDialog from './components/schedule/ScheduleDialog';
 import Toast from './components/common/Toast';
+import TodaySchedulePage from './components/schedule/TodaySchedulePage';
 
 export default function App() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [schedulesLoaded, setSchedulesLoaded] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(dateKey(today));
   const [view, setView] = useState<ScheduleView>('dashboard');
@@ -32,10 +34,14 @@ export default function App() {
 
   const reloadSchedules = useCallback(async () => {
     setSchedules(await getSchedules());
+    setSchedulesLoaded(true);
   }, []);
 
   useEffect(() => {
-    reloadSchedules().catch((error: Error) => showToast(`일정을 불러오지 못했습니다: ${error.message}`, 'error'));
+    reloadSchedules().catch((error: Error) => {
+      setSchedulesLoaded(true);
+      showToast(`일정을 불러오지 못했습니다: ${error.message}`, 'error');
+    });
   }, [reloadSchedules, showToast]);
 
   useEffect(() => {
@@ -116,13 +122,21 @@ export default function App() {
       <Header view={view} query={query} searchOpen={searchOpen} onQueryChange={setQuery} onSearchOpenChange={setSearchOpen} onAdd={() => openDialog()} onMenu={() => setSidebarOpen(true)} />
       <div className="content">
         <Toast message={toast.message} kind={toast.kind} />
-        <WelcomeSection />
-        <StatsGrid schedules={schedules} />
-        <section className="dashboard-grid">
-          <SchedulePanel schedules={visibleSchedules} view={view} selectedDate={selectedDate} query={query} onViewAll={() => selectView('all')} onAdd={() => openDialog()} onEdit={openDialog} onDelete={removeSchedule} onCompletion={changeCompletion} />
-          <CalendarPanel schedules={schedules} month={calendarMonth} selectedDate={selectedDate} onMonthChange={setCalendarMonth} onDateSelect={(date, month) => { setSelectedDate(date); setCalendarMonth(month); }} onToday={() => { setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); setSelectedDate(dateKey(today)); }} />
-        </section>
-        <footer className="page-footer"><span>오늘의 계획, MySchedule과 함께</span><span>나의 일정과 목표를 한곳에서</span></footer>
+        {view === 'today' ? <TodaySchedulePage
+          schedules={schedules}
+          loading={!schedulesLoaded}
+          onEdit={openDialog}
+          onDelete={removeSchedule}
+          onCompletion={changeCompletion}
+        /> : <>
+          <WelcomeSection />
+          <StatsGrid schedules={schedules} />
+          <section className="dashboard-grid">
+            <SchedulePanel schedules={visibleSchedules} view={view} selectedDate={selectedDate} query={query} onViewAll={() => selectView('all')} onAdd={() => openDialog()} onEdit={openDialog} onDelete={removeSchedule} onCompletion={changeCompletion} />
+            <CalendarPanel schedules={schedules} month={calendarMonth} selectedDate={selectedDate} onMonthChange={setCalendarMonth} onDateSelect={(date, month) => { setSelectedDate(date); setCalendarMonth(month); }} onToday={() => { setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); setSelectedDate(dateKey(today)); }} />
+          </section>
+          <footer className="page-footer"><span>오늘의 계획, MySchedule과 함께</span><span>나의 일정과 목표를 한곳에서</span></footer>
+        </>}
       </div>
     </main>
     <div className={`mobile-scrim${sidebarOpen ? ' show' : ''}`} onClick={() => setSidebarOpen(false)} />

@@ -20,8 +20,10 @@ public class ScheduleService {
 	}
 
 	public ScheduleResponse create(ScheduleRequest request) {
+		boolean timeUnspecified = request.resolvedTimeUnspecified();
 		Schedule schedule = new Schedule(null, request.title().trim(), normalizeDescription(request.description()),
-				request.date(), request.time(), request.priority(), false);
+				request.date(), timeUnspecified ? null : request.time(), timeUnspecified ? null : request.endTime(),
+				timeUnspecified, request.priority(), false);
 		return toResponse(scheduleRepository.save(schedule));
 	}
 
@@ -38,7 +40,10 @@ public class ScheduleService {
 		schedule.setTitle(request.title().trim());
 		schedule.setDescription(normalizeDescription(request.description()));
 		schedule.setDate(request.date());
-		schedule.setTime(request.time());
+		boolean timeUnspecified = request.resolvedTimeUnspecified();
+		schedule.setTime(timeUnspecified ? null : request.time());
+		schedule.setEndTime(timeUnspecified ? null : request.endTime());
+		schedule.setTimeUnspecified(timeUnspecified);
 		schedule.setPriority(request.priority());
 		return toResponse(scheduleRepository.save(schedule));
 	}
@@ -65,6 +70,6 @@ public class ScheduleService {
 
 	private ScheduleResponse toResponse(Schedule schedule) {
 		return new ScheduleResponse(schedule.getId(), schedule.getTitle(), schedule.getDescription(), schedule.getDate(),
-				schedule.getTime(), schedule.getPriority(), schedule.isCompleted());
+				schedule.getTime(), schedule.getEndTime(), schedule.isTimeUnspecified(), schedule.getPriority(), schedule.isCompleted());
 	}
 }

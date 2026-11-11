@@ -35,7 +35,7 @@ export default function SchedulePanel({ schedules, view, selectedDate, query, on
         const color = colors[Number(item.id) % colors.length];
         const priorities = { high: '높음', normal: '보통', low: '낮음' };
         return <article className="event-row" key={item.id}>
-          <div className="event-time"><strong>{formatTime(item.time)}</strong>{formatDate(item.date, { month: 'numeric', day: 'numeric' })}</div>
+          <div className="event-time"><strong>{formatTime(item.time || '')}</strong>{formatDate(item.date, { month: 'numeric', day: 'numeric' })}</div>
           <div className="event-main"><div className="event-title"><i className={`event-dot ${color}`} /><strong>{item.title}</strong></div><div className="event-description">{item.description || '설명이 없습니다.'}</div></div>
           <div className="event-meta"><span className={`status-pill status-${status}`}>{item.completed ? '완료' : '예정'}</span><span className={`priority-pill priority-${item.priority}`}>우선 {priorities[item.priority] || '보통'}</span>
             <div className="event-actions"><input className="completion-toggle" type="checkbox" checked={item.completed} onChange={(event) => onCompletion(item, event.target.checked)} aria-label={`${item.title} 완료 여부`} /><button type="button" onClick={() => onEdit(item)}>수정</button><button type="button" onClick={() => onDelete(item)}>삭제</button></div>
